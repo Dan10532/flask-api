@@ -7,7 +7,7 @@
 
 
 from flask import Flask,jsonify,request
-from flask_jwt_extended import JWTManager,create_access_token, jwt_required
+from flask_jwt_extended import JWTManager,create_access_token,jwt_required
 from flask_cors import CORS
 
 from models import db, Product,Sales,Purchases,User
@@ -19,27 +19,19 @@ CORS(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Mdan10532@localhost:5432/flask_shop'
 db.init_app(app)
 
-app.config["JWT_SECRET_KEY"] = "my_super_secret_key_123!@#randomlongstring"
+app.config["JWT_SECRET_KEY"] = "my_super_secret_key_123"
 jwt = JWTManager(app)
-
-
-
-
 
 @app.route("/", methods=["GET"])
 def home():
     return jsonify({"Flask API": "1.0"}), 200
 
-
 @app.route("/products", methods=["GET", "POST"])
+@jwt_required()
 def products():
-   
-    # Fetch all product
     if request.method == "GET":
         # Fetch all products from the database
         myproducts = Product.query.all()
-        
-        # Convert each Product object into a dictionary
         products_list = []
         for p in myproducts:
             products_list.append({
@@ -48,29 +40,31 @@ def products():
                 "buying_price": p.buying_price,
                 "selling_price": p.selling_price
             })
-        
-        # Return JSON response
         return jsonify(products_list), 200
-
 
     elif request.method == "POST":
         data = request.get_json()
-        new_product =Product(
-            name=data['name'],
-            buying_price=data['buying_price'],
-            selling_price=data['selling_price']
+
+        if not data:
+            return jsonify({"error": "No JSON received"}), 400
+        
+        name = data["name"]
+        buying_price = float(data["buying_price"])
+        selling_price = float(data["selling_price"])
+
+        new_product = Product(
+            name=name,
+            buying_price=buying_price,
+            selling_price=selling_price
         )
         db.session.add(new_product)
         db.session.commit()
-        data["id"] = new_product.id
 
         return jsonify({"message": "Successfully saved"}), 201
-    else:
-        error = {"error": "Method not allowed"}
-        return jsonify(error), 405
-    
+
 
 @app.route("/sales", methods=["GET", "POST"])
+@jwt_required()
 def sales_route():
     if request.method == "GET":
         # Fetch all sales from the DB
@@ -150,25 +144,25 @@ def Register_route():
     data["id"] = usrs.id
     return jsonify("Registration successful"), 201
 
+
+
 @app.route("/login", methods=["POST"])
 def login():
     data = request.get_json()
 
-    # Validate JSON body
     if not data or "email" not in data or "password" not in data:
         return jsonify({"error": "Email and password required"}), 400
 
-    # Query user using email only (safer + avoids weird query issues)
     usr = User.query.filter_by(email=data["email"]).first()
 
-    # Check credentials manually
     if usr is None or usr.password != data["password"]:
         return jsonify({"error": "Invalid email or password"}), 401
 
-    # Create token using user.id or email
-    token = create_access_token(identity=data["email"])
+  
+    token = create_access_token(identity=usr.email)
 
     return jsonify({"token": token}), 200
+
 
 
 
