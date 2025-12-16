@@ -67,7 +67,8 @@ def sales_route():
 
     elif request.method == "POST":
         data = request.get_json()
-        new_sale = Sales(product_id=data['product_id'], quantity=data['quantity'])
+        new_sale = Sales(
+            product_id=data['product_id'], quantity=data['quantity'])
         db.session.add(new_sale)
         db.session.commit()
         return jsonify({"message": "Sale recorded successfully"}), 201
@@ -89,7 +90,8 @@ def purchases_route():
 
     elif request.method == "POST":
         data = request.get_json()
-        new_purchase = Purchases(product_id=data['product_id'], stock_quantity=data['stock_quantity'])
+        new_purchase = Purchases(
+            product_id=data['product_id'], stock_quantity=data['stock_quantity'])
         db.session.add(new_purchase)
         db.session.commit()
         return jsonify({"message": "Purchase recorded successfully"}), 201
@@ -99,7 +101,8 @@ def purchases_route():
 @app.route("/register", methods=["POST"])
 def register_route():
     data = request.get_json()
-    new_user = User(username=data['username'], email=data['email'], password=data['password'])
+    new_user = User(username=data['username'],
+                    email=data['email'], password=data['password'])
     db.session.add(new_user)
     db.session.commit()
     return jsonify({"message": "User registered successfully"}), 201
@@ -119,6 +122,20 @@ def login():
     token = create_access_token(identity=usr.email)
     return jsonify({"token": token}), 200
 
+# forgot password
+
+
+@app.route("/forgot-password", methods=["POST"])
+def forgot_password():
+    data = request.get_json()
+    usr = User.query.filter_by(email=data["email"]).first()
+    if usr is None:
+        error = {"error": "Email not found"}
+        return jsonify(error), 404
+    else:
+        # In a real application, you would send an email with a reset link here
+        return jsonify({"message": "Password reset link has been sent to your email"}), 200
+
 
 # DASHBOARD
 @app.route("/dashboard", methods=["GET"])
@@ -128,7 +145,8 @@ def dashboard():
         db.session.query(
             Product.id,
             Product.name,
-            (func.coalesce(func.sum(Purchases.stock_quantity), 0) - func.coalesce(func.sum(Sales.quantity), 0)).label('remaining_stock')
+            (func.coalesce(func.sum(Purchases.stock_quantity), 0) -
+             func.coalesce(func.sum(Sales.quantity), 0)).label('remaining_stock')
         )
         .outerjoin(Purchases, Product.id == Purchases.product_id)
         .outerjoin(Sales, Product.id == Sales.product_id)
