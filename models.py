@@ -34,7 +34,7 @@ class Purchases(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 
-
+# User
 class User(db.Model):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
